@@ -1,6 +1,8 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <limits>
+#include <fstream>
 
 using namespace std;
 
@@ -39,7 +41,6 @@ char calculateGrade(int mark) {
         return 'E';
 }
 
-// Function to add a student
 void addStudent(vector<Student>& students) {
     if (students.size() >= 40) {
         cout << "Cannot add more than 40 students." << endl;
@@ -49,14 +50,26 @@ void addStudent(vector<Student>& students) {
     struct Student newStudent;
     cout << "Enter registration number: ";
     cin >> newStudent.reg_number;
+
+    // Clear the input buffer
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+
+    // When cin >> is used for string inputs,
+    // it only captures the first word and leaves the rest in the input buffer,
+    // leading to unexpected behavior in subsequent input requests.
     cout << "Enter name: ";
-    cin >> newStudent.name;
+    getline(cin, newStudent.name);
+
     cout << "Enter age: ";
     cin >> newStudent.age;
     cout << "Enter course code: ";
     cin >> newStudent.course.course_code;
+
+    // Clear the input buffer
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+
     cout << "Enter course name: ";
-    cin >> newStudent.course.course_name;
+    getline(cin, newStudent.course.course_name);
 
     // Initialize grade with default values
     newStudent.grade.mark = -1; // -1 indicates that the grade has not been calculated yet
@@ -121,19 +134,69 @@ void displayStudentDetails(const Student& student) {
 
 // Function to display all students' details
 void displayAllStudents(const vector<Student>& students) {
+    //if the students file is empty,
+    //it returns no students found
     if (students.empty()) {
         cout << "No students found." << endl;
         return;
     }
 
+    //Displays student content
     for (const auto& student : students) {
         cout << "----------------------" << endl;
         displayStudentDetails(student);
     }
 }
 
+// Function to save students' information to a file
+void saveToFile(const vector<Student>& students, const string& filename) {
+    ofstream file(filename);
+
+    for (const auto& student : students) {
+        file << student.reg_number << "\n";
+        file << student.name << "\n";
+        file << student.age << "\n";
+        file << student.course.course_code << "\n";
+        file << student.course.course_name << "\n";
+        file << student.grade.mark << "\n";
+        file << student.grade.the_grade << "\n";
+    }
+
+    file.close();
+}
+
+// Function to load students' information from a file
+void loadFromFile(vector<Student>& students, const string& filename) {
+    ifstream file(filename);
+
+    while (file.good()) {
+        struct Student student;
+        getline(file, student.reg_number);
+        getline(file, student.name);
+        file >> student.age;
+        file.ignore(numeric_limits<streamsize>::max(), '\n');
+        getline(file, student.course.course_code);
+        getline(file, student.course.course_name);
+        file >> student.grade.mark;
+        file >> student.grade.the_grade;
+        file.ignore(numeric_limits<streamsize>::max(), '\n');
+
+        if (!student.reg_number.empty()) {
+            students.push_back(student);
+        }
+    }
+
+    file.close();
+}
+
 int main() {
     vector<Student> students;
+
+    //Initialize the file and name
+    const string filename = "students_data.txt";
+
+    // Load data from the file
+    loadFromFile(students, filename);
 
     int choice;
     do {
@@ -155,7 +218,9 @@ int main() {
                 displayAllStudents(students);
                 break;
             case 5:
-                cout << "Exiting program." << endl;
+                // Save data to the file before exiting
+                saveToFile(students, filename);
+                cout << "Data saved. Exiting program." << endl;
                 break;
             default:
                 cout << "Invalid choice. Try again." << endl;
